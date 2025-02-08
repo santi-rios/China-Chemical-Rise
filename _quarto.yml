@@ -14,10 +14,10 @@ website:
       - text: "Figure 1"
         file: index.qmd
   page-footer: 
-  left: "Data in shinylive apps"
-  right: 
-    - icon: github
-      href: https://github.com/coatless-tutorials/r-shinylive-data-include
+    left: "Data in shinylive apps"
+    right: 
+      - icon: github
+        href: https://github.com/coatless-tutorials/r-shinylive-data-include
 
 lang: en
 

@@ -17,22 +17,28 @@ filters:
 ```{shinylive-r}
 #| standalone: true
 #| viewerHeight: 800
-
-# components: [editor, viewer]
-# layout: vertical
 library(shiny)
 library(bslib)
 library(tidyverse)
 library(plotly)
-library(countrycode)  # For country codes
+library(countrycode)
 library(DT)
 
 ######### Data Preparation #########
 df <- read.csv("df.csv")
 
+######### Custom Labels #########
+figure_labels <- list(
+  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"),
+  "Figure1b" = list(y_title = "Collaboration Index", map_title = "International Collaborations"),
+  "Figure1c" = list(y_title = "Collaboration Percentage", map_title = "China-US Collaboration"),
+  "Figure1d" = list(y_title = "GDP Growth Rate (%)", map_title = "Economic Indicators"),
+  "Figure1e" = list(y_title = "Researchers (Count)", map_title = "R&D Workforce")
+)
+
 ######### APP #########
 ui <- fluidPage(
-  theme = bs_theme(bootswatch = "flatly"),
+  theme = bs_theme(bootswatch = "flatly", primary = "#2c3e50", secondary = "#18bc9c"),
   
   # Navbar at the top
   div(
@@ -48,130 +54,142 @@ ui <- fluidPage(
     
     # Control Panel
     card(
-      card_header("Controls"),
+      card_header("Controls", class = "bg-primary text-light"),
       card_body(
         selectInput("facet", "Select figure:",
                     choices = unique(df$source),
                     selected = "Figure1a",
                     width = "100%"),
-        selectInput("countries", "Choose Countries (delete with backspace):",
-                    choices = NULL,
-                    selected = NULL,
-                    multiple = TRUE,
-                    width = "100%"),
         
-        # Add Year Slider with Animation
-        sliderInput("year", "Year",
-                    min = min(df$Year, na.rm = TRUE),
-                    max = max(df$Year, na.rm = TRUE),
-                    value = min(df$Year, na.rm = TRUE),
-                    step = 1,
-                    animate = animationOptions(interval = 1000, loop = TRUE))
-        ,
+        div(class = "form-group",
+            h5("Select Countries:"),
+            uiOutput("country_checkboxes")
+        ),
+        
+        div(class = "animation-controls",
+            sliderInput("year", "Year",
+                        min = min(df$Year),
+                        max = max(df$Year),
+                        value = min(df$Year),
+                        step = 1,
+                        animate = animationOptions(interval = 500, loop = TRUE),
+                        width = "100%")
+        ),
+        
         uiOutput("figure_description")
       )
     ),
     
-    # Plots
+    # Visualization Panel
     layout_column_wrap(
       width = 1/1,
       card(
         full_screen = TRUE,
-        card_header("Figure 1"),
+        card_header("Interactive Visualizations", class = "bg-primary text-light"),
         card_body(
-          plotlyOutput("emissionsPlot", height = "50vh")
-        )
-      ),
-      card(
-        full_screen = TRUE,
-        card_header("World Map Visualization"),
-        card_body(
+          plotlyOutput("emissionsPlot", height = "50vh"),
+          br(),
           plotlyOutput("worldMap", height = "40vh")
         )
       )
     )
   ),
   
-  br(),
-  
-  # Data Table
+  # Data Section
   card(
-    card_header("Data Table"),
+    card_header("Data Explorer", class = "bg-primary text-light"),
     card_body(
       DTOutput("table")
     )
   ),
   
-  br(),
-  
-  # Download Button
-  downloadButton("downloadData", "Download Data"),
+  downloadButton("downloadData", "Download Dataset", class = "btn-success"),
   
   # Footer
   div(
-    class = "navbar navbar-static-bottom bg-light",
+    class = "footer navbar navbar-static-bottom bg-light",
+    style = "margin-bottom: 20px;",
     div(
       class = "container-fluid",
-      "Data taken from Bermudez-Montana, Garcia-Chung, et al, 2025: ",
-      a("https://doi.org/10.26434/chemrxiv-2025-d2zc8", 
-        href = "https://chemrxiv.org/engage/chemrxiv/article-details/67920ada6dde43c908f688f6")
+      "Data source: Bermudez-Montana, Garcia-Chung, et al, 2025 - ",
+      a("ChemRxiv Publication", href = "https://doi.org/10.26434/chemrxiv-2025-d2zc8",
+        style = "color: #18bc9c;")
     )
   )
 )
 
 server <- function(input, output, session) {
   
-  # Update Countries based on selected facet
-  observeEvent(input$facet, {
+  # Reactive axis labels
+  axis_labels <- reactive({
+    req(input$facet)
+    figure_labels[[input$facet]] %||% list(y_title = "Value", map_title = "Value")
+  })
+  
+  # Country selection checkboxes
+  output$country_checkboxes <- renderUI({
+    req(input$facet)
     countries <- df %>% 
       filter(source == input$facet) %>% 
       pull(Country) %>% 
-      unique()
+      unique() %>% 
+      sort()
     
-    updateSelectInput(inputId = "countries", 
-                      choices = countries,
-                      selected = head(countries, 4))
+    fluidRow(
+      column(6,
+             checkboxGroupInput("countries", NULL, 
+                               choices = head(countries, ceiling(length(countries)/2)),
+                               selected = head(countries, 4))
+      ),
+      column(6,
+             checkboxGroupInput("countries2", NULL,
+                               choices = tail(countries, floor(length(countries)/2)))
+      )
+    )
   })
   
-  # Figure Description
+  # Combine checkbox inputs
+  selected_countries <- reactive({
+    unique(c(input$countries, input$countries2))
+  })
+  
+  # Update figure description
   output$figure_description <- renderUI({
     req(input$facet)
     desc_text <- case_when(
-      input$facet == "Figure1a" ~ "Country participation in the growth of the CS",
-      input$facet == "Figure1b" ~ "Eight most relevant international collaborations",
-      input$facet == "Figure1c" ~ "China-US collaboration in new substances",
-      input$facet == "Figure1d" ~ "GDP per capita growth rate highlights",
-      input$facet == "Figure1e" ~ "Researchers in R&D activities",
+      input$facet == "Figure1a" ~ "Country participation in chemical space growth using formula:",
+      input$facet == "Figure1b" ~ "Top international collaborations in chemical research:",
+      input$facet == "Figure1c" ~ "China-US collaborative contributions to new substances:",
+      input$facet == "Figure1d" ~ "Economic indicators and major events timeline:",
+      input$facet == "Figure1e" ~ "Research workforce development metrics:",
       TRUE ~ paste("Displaying:", input$facet)
     )
-    div(class = "text-muted", style = "margin: 10px 0;", desc_text)
+    
+    div(class = "callout",
+        h5(desc_text),
+        if(input$facet == "Figure1a") withMathJax(helpText("$$C_{i,t} = \\frac{1}{n_t} \\sum_s \\frac{n_{i,s,t}}{n_{a,s,t}}$$"))
+    )
   })
   
-  ######### Emissions Plot #########
+  # Main emissions plot
   output$emissionsPlot <- renderPlotly({
-    req(input$countries, input$facet, input$year)
+    req(selected_countries(), input$facet, input$year)
     
-    # Filter data up to the current year for cumulative display
     filtered_data <- df %>% 
-      filter(Country %in% input$countries, 
+      filter(Country %in% selected_countries(),
              source == input$facet,
              Year <= input$year) %>% 
       arrange(Year)
     
     if (nrow(filtered_data) == 0) return(plotly_empty())
     
-    fig <- filtered_data %>%
-      plot_ly(
-        x = ~Year,
-        y = ~Value,
-        color = ~Country,
-        type = 'scatter',
-        mode = 'lines',
-        line = list(simplify = FALSE, width = 2),
-        hoverinfo = 'text',
-        text = ~paste("Country:", Country, "<br>Year:", Year, "<br>Value:", round(Value, 2))
-      )
-    
+    fig <- plot_ly(filtered_data, x = ~Year, y = ~Value, color = ~Country,
+            type = 'scatter', mode = 'lines+markers', line = list(simplify = FALSE, width = 2), showlegend = TRUE,
+            hoverinfo = 'text', text = ~paste0("<b>", Country, "</b><br>",
+                                              axis_labels()$y_title, ": ", round(Value, 2),
+                                              "<br>Year: ", Year))
+      # add_text(text = ~Country, showlegend = FALSE, textposition = "top right") 
+
     # Add annotations for the latest year
     final_data <- filtered_data %>% 
       group_by(Country) %>% 
@@ -192,28 +210,27 @@ server <- function(input, output, session) {
         xshift = 10
       )
     }
-    
-    fig %>% layout(
-      title = paste("Chemical Space Analysis -", input$facet),
-      xaxis = list(title = "Year", range = c(min(df$Year, na.rm = TRUE), max(df$Year, na.rm = TRUE))),
-      yaxis = list(title = "Value"),
-      hovermode = "x unified",
-      legend = list(orientation = "h", y = -0.2),
-      margin = list(r = 40)
-    )
+
+    fig %>%
+      layout(
+        title = paste("Temporal Analysis -", input$facet),
+        xaxis = list(title = "Year", gridcolor = "#ecf0f1"),
+        yaxis = list(title = axis_labels()$y_title, gridcolor = "#ecf0f1"),
+        hovermode = "x unified",
+        plot_bgcolor = "#ffffff",
+        legend = list(orientation = 'h', y = -0.2),
+        margin = list(r = 40)
+      )
   })
   
-  ######### World Map #########
+  # World map visualization
   output$worldMap <- renderPlotly({
     req(input$facet, input$year)
     
-    # Filter data for the current year
     map_data <- df %>%
       filter(source == input$facet, Year == input$year) %>%
-      mutate(
-        iso_code = countrycode(Country, "country.name", "iso3c")
-      ) %>%
-      na.omit()
+      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) %>%
+      drop_na()
     
     if (nrow(map_data) == 0) return(plotly_empty())
     
@@ -223,50 +240,49 @@ server <- function(input, output, session) {
         color = ~Value,
         colors = "Blues",
         locations = ~iso_code,
-        marker = list(line = list(color = "gray", width = 0.5)),
-        text = ~paste(Country, "<br>Value:", round(Value, 2)),
-        hoverinfo = "text"
+        text = ~paste0("<b>", Country, "</b><br>",
+                      axis_labels()$map_title, ": ", round(Value, 2)),
+        hoverinfo = "text",
+        marker = list(line = list(color = "white", width = 0.5))
       ) %>%
-      colorbar(title = "Value") %>%
+      colorbar(title = axis_labels()$map_title) %>%
       layout(
-        title = paste("World Map Visualization -", input$facet, "(", input$year, ")"),
+        title = paste("Global Distribution -", input$facet, "(", input$year, ")"),
         geo = list(
           showframe = FALSE,
           showcoastlines = TRUE,
           projection = list(type = "natural earth"),
           bgcolor = "rgba(0,0,0,0)",
-          landcolor = "#F0F0F0",
-          countrycolor = "#D3D3D3"
-        ),
-        margin = list(l = 0, r = 0, t = 30, b = 0)  # Adjusted top margin for title
-      )
-  })
-  
-  ######### Data Table #########
-  output$table <- renderDT({
-    req(input$facet)
-    
-    df_table <- df %>%
-      filter(source == input$facet) %>%
-      select(Country, Year, Value) %>%
-      datatable(
-        rownames = FALSE,
-        options = list(
-          pageLength = 10,
-          lengthMenu = c(10, 20, 30),
-          autoWidth = TRUE
+          landcolor = "#f8f9fa"
         )
       )
-    df_table  
   })
   
-  ######### Download Handler #########
+  # Data table
+  output$table <- renderDT({
+    req(input$facet)
+    df %>%
+      filter(source == input$facet) %>%
+      datatable(
+        rownames = FALSE,
+        extensions = 'Buttons',
+        options = list(
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel'),
+          pageLength = 10,
+          scrollX = TRUE
+        )
+      ) %>%
+      formatRound(columns = 'Value', digits = 2)
+  })
+  
+  # Data download
   output$downloadData <- downloadHandler(
     filename = function() {
-      paste("data-", Sys.Date(), ".csv", sep = "")
+      paste0("chemical-space-", input$facet, "-", Sys.Date(), ".csv")
     },
     content = function(file) {
-      write.csv(df, file, row.names = FALSE)
+      write.csv(df %>% filter(source == input$facet), file, row.names = FALSE)
     }
   )
 }
