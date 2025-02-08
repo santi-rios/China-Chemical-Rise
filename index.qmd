@@ -24,6 +24,11 @@ library(plotly)
 library(countrycode)
 library(DT)
 
+# Install the 'pak' package manager if you haven't already
+# install.packages("pak")
+# Install 'r-shinylive' using 'pak'
+# pak::pak("posit-dev/r-shinylive")
+
 ######### Data Preparation #########
 df <- read.csv("df.csv")
 
