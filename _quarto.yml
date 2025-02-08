@@ -1,11 +1,11 @@
 project:
   type: website
   output-dir: _site
-  # resources: 
-  # - shinylive-sw.js
+  resources: 
+  - shinylive-sw.js
 
 website:  
-  repo-url: https://github.com/santi-rios/China-Chemical-Dominance
+  repo-url: https://github.com/santi-rios/China-Chemical-Rise
   repo-actions: [edit, issue]
   title: "r-shinylive in Quarto"
   navbar:
@@ -28,6 +28,8 @@ format:
       sidebar-width: 200px
       margin-width: 200px
     toc: true
+    theme: litera
+    # css: style.css
 
 # Attach shinylive to every page
 filters:
