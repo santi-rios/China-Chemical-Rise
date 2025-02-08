@@ -13,6 +13,13 @@ website:
     left:
       - text: "Figure 1"
         file: index.qmd
+  page-footer: 
+  left: "Data in shinylive apps"
+  right: 
+    - icon: github
+      href: https://github.com/coatless-tutorials/r-shinylive-data-include
+
+lang: en
 
 format:
   html:
@@ -22,3 +29,6 @@ format:
       margin-width: 200px
     toc: true
 
+# Attach shinylive to every page
+filters:
+  - shinylive
