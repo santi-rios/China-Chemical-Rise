@@ -1,0 +1,24 @@
+project:
+  type: website
+  output-dir: _site
+  # resources: 
+  # - shinylive-sw.js
+
+website:  
+  repo-url: https://github.com/santi-rios/China-Chemical-Dominance
+  repo-actions: [edit, issue]
+  title: "r-shinylive in Quarto"
+  navbar:
+    search: true
+    left:
+      - text: "Figure 1"
+        file: index.qmd
+
+format:
+  html:
+    grid: 
+      body-width: 1350px
+      sidebar-width: 200px
+      margin-width: 200px
+    toc: true
+

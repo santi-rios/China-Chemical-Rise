@@ -1,0 +1,299 @@
+---
+title: "Chemical Space Analysis"
+author: "RStudio"
+format:
+  html:
+    grid: 
+      body-width: 1400px
+    # resources: 
+    #   - shinylive-sw.js
+filters:
+  - shinylive
+---
+
+## Chemical Space Evolution Analysis
+
+```{shinylive-r}
+#| standalone: true
+#| viewerHeight: 800
+library(shiny)
+library(bslib)
+library(tidyverse)
+library(plotly)
+library(countrycode)  # For country codes
+library(DT)
+
+######### Data Preparation #########
+read_figuras <- function(directory) {
+  files <- list.files(directory, pattern = "^Figure1.*\\.tsv$", full.names = TRUE)
+  
+  data_list <- lapply(files, function(file) {
+    read_tsv(file) %>%
+      pivot_longer(cols = -Country, names_to = "Year", values_to = "Value") %>%
+      mutate(Year = as.numeric(Year),
+             source = tools::file_path_sans_ext(basename(file)))
+  })
+  
+  bind_rows(data_list)
+}
+
+df <- read_figuras("data/")
+
+######### Animation Function #########
+accumulate_by <- function(dat, var) {
+  var <- rlang::ensym(var)
+  lvls <- sort(unique(dat[[var]]))
+  dats <- lapply(lvls, function(x) {
+    dat %>% filter(!!var <= x) %>% mutate(frame = x)
+  })
+  bind_rows(dats)
+}
+
+######### APP #########
+ui <- page_fluid(
+  theme = bs_theme(bootswatch = "flatly"),
+  div(
+    class = "navbar navbar-static-top primary bg-primary",
+    div("China's rise in the chemical space and the decline of US influence", 
+        class = "container-fluid")
+  ),
+  br(),
+  layout_columns(
+    col_widths = c(3, 9),
+    card(
+      card_header("Controls"),
+      card_body(
+        selectInput("facet", "Select figure:",
+                    choices = unique(df$source),
+                    selected = "Figure1a",
+                    width = "100%"),
+        selectInput("countries", "Choose Countries (delete with backspace):",
+                    choices = NULL,
+                    selected = NULL,
+                    multiple = TRUE,
+                    width = "100%"),
+        uiOutput("figure_description")
+      )
+    ),
+    layout_column_wrap(
+      width = 1/1,
+      card(
+        full_screen = TRUE,
+        card_header("Figure 1"),
+        card_body(
+          plotlyOutput("emissionsPlot", height = "50vh")
+        )
+      ),
+      card(
+        full_screen = TRUE,
+        card_header("World Map Visualization"),
+        card_body(
+          plotlyOutput("worldMap", height = "40vh")
+        )
+      )
+    )
+  ),
+  br(),
+  card(
+    card_header("Data Table"),
+    card_body(
+      DTOutput("table")
+    )
+  ),
+  br(),
+  downloadButton("downloadData", "Download Data"),
+  div(
+    class = "navbar navbar-static-bottom bg-light",
+    div(
+      class = "container-fluid",
+      "Data taken from Bermudez-Montana, Garcia-Chung, et al, 2025: ",
+      a("https://doi.org/10.26434/chemrxiv-2025-d2zc8", 
+        href = "https://chemrxiv.org/engage/chemrxiv/article-details/67920ada6dde43c908f688f6")
+    )
+  )
+)
+
+server <- function(input, output) {
+  observeEvent(input$facet, {
+    countries <- df %>% 
+      filter(source == input$facet) %>% 
+      pull(Country) %>% 
+      unique()
+    
+    updateSelectInput(inputId = "countries", 
+                      choices = countries,
+                      selected = head(countries, 4))
+  })
+
+  output$figure_description <- renderUI({
+    req(input$facet)
+    desc_text <- case_when(
+      input$facet == "Figure1a" ~ "Country participation in the growth of the CS",
+      input$facet == "Figure1b" ~ "Eight most relevant international collaborations",
+      input$facet == "Figure1c" ~ "China-US collaboration in new substances",
+      input$facet == "Figure1d" ~ "GDP per capita growth rate highlights",
+      input$facet == "Figure1e" ~ "Researchers in R&D activities",
+      TRUE ~ paste("Displaying:", input$facet)
+    )
+    div(class = "text-muted", style = "margin: 10px 0;", desc_text)
+  })
+  
+  output$emissionsPlot <- renderPlotly({
+    req(input$countries, input$facet)
+    
+    filtered_data <- df %>% 
+      filter(Country %in% input$countries, 
+             source == input$facet) %>% 
+      arrange(Year)
+    
+    if (nrow(filtered_data) == 0) return(plotly_empty())
+    
+    animated_data <- accumulate_by(filtered_data, Year)
+    
+    fig <- animated_data %>%
+      plot_ly(
+        x = ~Year,
+        y = ~Value,
+        color = ~Country,
+        frame = ~frame,
+        type = 'scatter',
+        mode = 'lines',
+        line = list(simplify = FALSE, width = 2),
+        hoverinfo = 'text',
+        text = ~paste("Country:", Country, "<br>Year:", Year, "<br>Value:", round(Value, 2))
+      )
+    
+    final_data <- filtered_data %>% 
+      group_by(Country) %>% 
+      filter(Year == max(Year)) %>% 
+      ungroup()
+    
+    for(i in 1:nrow(final_data)) {
+      fig <- fig %>% add_annotations(
+        x = final_data$Year[i],
+        y = final_data$Value[i],
+        text = final_data$Country[i],
+        xref = "x",
+        yref = "y",
+        xanchor = 'left',
+        yanchor = 'middle',
+        showarrow = FALSE,
+        font = list(size = 12),
+        xshift = 10
+      )
+    }
+    
+    fig %>% layout(
+      title = paste("Chemical Space Analysis -", input$facet),
+      xaxis = list(title = "Year", range = c(1995, 2023)),
+      yaxis = list(title = "Value"),
+      hovermode = "x unified",
+      legend = list(orientation = "h", y = -0.2),
+      margin = list(r = 40)
+    ) %>%
+    animation_opts(
+      frame = 300, 
+      transition = 100,
+      redraw = FALSE,
+      mode = "afterall"
+    ) %>%
+    animation_slider(
+      currentvalue = list(font = list(color = "black"))
+    )
+  })
+
+  # Prepare map data
+  map_data <- reactive({
+    req(input$facet)
+    
+    df %>%
+      filter(source == input$facet) %>%
+      group_by(Country) %>%
+      filter(Year == max(Year)) %>%
+      ungroup() %>%
+      mutate(
+        iso_code = countrycode(Country, "country.name", "iso3c")
+        # hover_text = paste(
+        #   Country, "<br>",
+        #   "Latest Value (", Year, "): ", round(Value, 2),
+        #   "<br>Source: ", input$facet
+        ) %>%
+      na.omit()  
+  })
+  
+  output$worldMap <- renderPlotly({
+    req(map_data())
+    
+    plot_geo(map_data()) %>%
+      add_trace(
+        z = ~Value,
+        color = ~Value,
+        colors = "Blues",
+        # text = ~hover_text,
+        locations = ~iso_code,
+        # hoverinfo = "text",
+        marker = list(line = list(color = "gray", width = 0.5))
+      ) %>%
+      colorbar(title = "Value") %>%
+      layout(
+        geo = list(
+          showframe = FALSE,
+          showcoastlines = TRUE,
+          projection = list(type = "natural earth"),
+          bgcolor = "rgba(0,0,0,0)",
+          landcolor = "#F0F0F0",
+          countrycolor = "#D3D3D3"
+        ),
+        margin = list(l = 0, r = 0, t = 0, b = 0)
+      )
+  })
+
+  output$table <- renderDT({
+    req(input$facet)
+    
+    df_table <- df %>%
+      filter(source == input$facet) %>%
+      select(Country, Year, Value) %>%
+      datatable(
+        rownames = FALSE,
+        options = list(
+          pageLength = 10,
+          lengthMenu = c(10, 20, 30),
+          autoWidth = TRUE
+        )
+      )
+    df_table  
+  })
+
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("data-", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+}
+
+shinyApp(ui, server)
+```
+
+
+## Chemical Space Analysis
+
+$$
+C_{i,t} = \frac{1}{n_t} \sum_s \frac{n_{i,s,t}}{n_{a,s,t}}
+$$
+
+**Description of Elements:**
+
+- $Ci,tCi,t$​: Contribution of country ii to the chemical space (CS) expansion in year tt.
+- $ntnt$​: Total number of new reported chemicals in year tt.
+- $ss$: Index representing a specific chemical substance.
+- $ni,s,tni,s,t$​: Number of authors from country ii who published substance ss for the first time in year tt.
+- $na,s,tna,s,t$​: Total number of authors participating in the publication of substance ss in year tt.
+
+::: {.callout-note}
+
+This formula calculates the weighted contribution of a country to the discovery of new chemical substances. The contribution is proportional to the number of authors from a specific country relative to the total number of authors involved in reporting each substance. Finally, this contribution is normalized by the total number of new substances for that year.
+:::
