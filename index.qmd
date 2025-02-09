@@ -74,11 +74,11 @@ ui <- fluidPage(
         
         div(class = "animation-controls",
             sliderInput("year", "Year",
-                        min = min(df$Year),
-                        max = max(df$Year),
+                        min = min(df$Year) ,
+                        max = max(df$Year) - 1,
                         value = min(df$Year),
                         step = 1,
-                        animate = animationOptions(interval = 500, loop = TRUE),
+                        animate = animationOptions(interval = 800, loop = FALSE),
                         width = "100%")
         ),
         
@@ -149,7 +149,8 @@ server <- function(input, output, session) {
       ),
       column(6,
              checkboxGroupInput("countries2", NULL,
-                               choices = tail(countries, floor(length(countries)/2)))
+                               choices = tail(countries, floor(length(countries)/2)),
+                               selected = tail(countries, 4))
       )
     )
   })
@@ -217,7 +218,7 @@ server <- function(input, output, session) {
       )
     }
 
-    fig %>%
+    fig <- fig %>%
       layout(
         title = paste("Temporal Analysis -", input$facet),
         xaxis = list(title = "Year", gridcolor = "#ecf0f1"),
@@ -227,6 +228,13 @@ server <- function(input, output, session) {
         legend = list(orientation = 'h', y = -0.2),
         margin = list(r = 40)
       )
+
+    if (input$facet == "Figure1d") {
+      fig %>% add_segments(x = 2020, xend = 2020, y = 0, yend = 15)
+    }
+    else {
+       fig
+    }
   })
   
   # World map visualization
@@ -235,8 +243,8 @@ server <- function(input, output, session) {
     
     map_data <- df %>%
       filter(source == input$facet, Year == input$year) %>%
-      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) %>%
-      drop_na()
+      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) 
+      # drop_na()
     
     if (nrow(map_data) == 0) return(plotly_empty())
     
