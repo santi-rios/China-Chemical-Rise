@@ -230,7 +230,35 @@ server <- function(input, output, session) {
       )
 
     if (input$facet == "Figure1d") {
-      fig %>% add_segments(x = 2020, xend = 2020, y = 0, yend = 15)
+      fig %>%
+    # layout(
+    #   shapes = list(
+    #     list(
+    #       type = "line",
+    #       x0 = 2020,
+    #       x1 = 2020,
+    #       y0 = 0,
+    #       y1 = 13,
+    #       line = list(color = "blue", width = 2, dash = "dot")
+    #     )
+    #   )
+    #   ) %>%
+    add_text(showlegend = FALSE, x = 2020, y = 10,
+            text = "COVID-19") %>%
+    # layout(
+    #   shapes = list(
+    #     list(
+    #       type = "line",
+    #       x0 = 2007,
+    #       x1 = 2007,
+    #       y0 = 0,
+    #       y1 = 10,
+    #       line = list(color = "green", width = 2, dash = "dot")
+    #     )
+    #   )
+    #   ) %>%
+    add_text(showlegend = FALSE, x = 2007, y = 15,
+            text = "Global Financial Crisis")
     }
     else {
        fig
@@ -322,3 +350,7 @@ $$
 
 This formula calculates the weighted contribution of a country to the discovery of new chemical substances. The contribution is proportional to the number of authors from a specific country relative to the total number of authors involved in reporting each substance. Finally, this contribution is normalized by the total number of new substances for that year.
 :::
+
+```{r}
+
+```
