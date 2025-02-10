@@ -1,6 +1,6 @@
 ---
 title: "Chemical Space Analysis"
-author: "RStudio"
+author: "author"
 format:
   html:
     grid: 
@@ -351,7 +351,3 @@ $$
 
 This formula calculates the weighted contribution of a country to the discovery of new chemical substances. The contribution is proportional to the number of authors from a specific country relative to the total number of authors involved in reporting each substance. Finally, this contribution is normalized by the total number of new substances for that year.
 :::
-
-```{r}
-
-```
