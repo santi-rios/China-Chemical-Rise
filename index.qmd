@@ -18,9 +18,10 @@ filters:
 #| standalone: true
 #| viewerHeight: 800
 library(shinylive)
-library(shiny)
+# library(shiny)
 library(bslib)
-library(tidyverse)
+# library(tidyverse)
+library(dplyr)
 library(plotly)
 library(countrycode)
 library(DT)
@@ -35,7 +36,7 @@ df <- read.csv("df.csv")
 
 ######### Custom Labels #########
 figure_labels <- list(
-  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"),
+  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"), 
   "Figure1b" = list(y_title = "Collaboration Index", map_title = "International Collaborations"),
   "Figure1c" = list(y_title = "Collaboration Percentage", map_title = "China-US Collaboration"),
   "Figure1d" = list(y_title = "GDP Growth Rate (%)", map_title = "Economic Indicators"),
