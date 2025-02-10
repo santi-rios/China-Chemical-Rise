@@ -52,13 +52,17 @@ jobs:
       # Make sure to set a retention day to avoid running into a cap
       # This artifact shouldn't be required after deployment onto pages was a success.
       - name: Upload Pages artifact
+        id: upload-artifact
         uses: actions/upload-pages-artifact@v2
         with: 
-          retention-days: 1
+          name: github-pages
       
       # Use an Action deploy to push the artifact onto GitHub Pages
       # This requires the `Action` tab being structured to allow for deployment
       # instead of using `docs/` or the `gh-pages` branch of the repository
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
+        with: 
+          artifact_name: github-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
