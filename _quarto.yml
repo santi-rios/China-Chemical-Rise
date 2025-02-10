@@ -18,6 +18,10 @@ website:
     right: 
       - icon: github
         href: https://github.com/coatless-tutorials/r-shinylive-data-include
+      - text: "Joe's Shiny App"
+        file: R-shinylive-demo.qmd
+      - text: "Skeletal Template"
+        file: template-r-shinylive.qmd
 
 lang: en
 
