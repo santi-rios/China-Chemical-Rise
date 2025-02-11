@@ -17,32 +17,25 @@ filters:
 ```{shinylive-r}
 #| standalone: true
 #| viewerHeight: 800
-library(shinylive)
-# library(shiny)
+library(shiny)
 library(bslib)
-library(tidyverse)
-# library(dplyr)
+library(dplyr)
 library(plotly)
-library(countrycode)
-library(DT)
-
-# Install the 'pak' package manager if you haven't already
-# install.packages("pak")
-# Install 'r-shinylive' using 'pak'
-# pak::pak("posit-dev/r-shinylive")
 
 ######### Data Preparation #########
 # df <- read.csv("df.csv")
-data_url <- "https://raw.githubusercontent.com/santi-rios/China-Chemical-Rise/refs/heads/main/df.csv"
+data_url <- "https://raw.githubusercontent.com/santi-rios/China-Chemical-Rise/refs/heads/main/data/merged_figure1.csv"
 download.file(data_url, "df.csv")
-df <- read.csv("df.csv")
+df <- read.csv("df.csv") 
+
 ######### Custom Labels #########
 figure_labels <- list(
-  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"), 
-  "Figure1b" = list(y_title = "Collaboration Index", map_title = "International Collaborations"),
-  "Figure1c" = list(y_title = "Collaboration Percentage", map_title = "China-US Collaboration"),
-  "Figure1d" = list(y_title = "GDP Growth Rate (%)", map_title = "Economic Indicators"),
-  "Figure1e" = list(y_title = "Researchers (Count)", map_title = "R&D Workforce")
+  "Figure1-a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"), 
+  "Figure1-a_b" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"), 
+  "Figure1-b" = list(y_title = "Collaboration Index", map_title = "International Collaborations"),
+  "Figure1-c" = list(y_title = "Collaboration Percentage", map_title = "China-US Collaboration"),
+  "Figure1-d" = list(y_title = "GDP Growth Rate (%)", map_title = "Economic Indicators"),
+  "Figure1-e" = list(y_title = "Researchers (Count)", map_title = "R&D Workforce")
 )
 
 ######### APP #########
@@ -67,7 +60,7 @@ ui <- fluidPage(
       card_body(
         selectInput("facet", "Select figure:",
                     choices = unique(df$source),
-                    selected = "Figure1a",
+                    selected = "Figure1-a",
                     width = "100%"),
         
         div(class = "form-group",
@@ -167,17 +160,18 @@ server <- function(input, output, session) {
   output$figure_description <- renderUI({
     req(input$facet)
     desc_text <- case_when(
-      input$facet == "Figure1a" ~ "Country participation in chemical space growth using formula:",
-      input$facet == "Figure1b" ~ "Top international collaborations in chemical research:",
-      input$facet == "Figure1c" ~ "China-US collaborative contributions to new substances:",
-      input$facet == "Figure1d" ~ "Economic indicators and major events timeline:",
-      input$facet == "Figure1e" ~ "Research workforce development metrics:",
+      input$facet == "Figure1-a" ~ "Country participation in chemical space growth using formula:",
+      input$facet == "Figure1-a_b" ~ "Country participation in chemical space growth using formula:",
+      input$facet == "Figure1-b" ~ "Top international collaborations in chemical research:",
+      input$facet == "Figure1-c" ~ "China-US collaborative contributions to new substances:",
+      input$facet == "Figure1-d" ~ "Economic indicators and major events timeline:",
+      input$facet == "Figure1-e" ~ "Research workforce development metrics:",
       TRUE ~ paste("Displaying:", input$facet)
     )
     
     div(class = "callout",
         h5(desc_text),
-        if(input$facet == "Figure1a") withMathJax(helpText("$$C_{i,t} = \\frac{1}{n_t} \\sum_s \\frac{n_{i,s,t}}{n_{a,s,t}}$$"))
+        if(input$facet == "Figure1-a") withMathJax(helpText("$$C_{i,t} = \\frac{1}{n_t} \\sum_s \\frac{n_{i,s,t}}{n_{a,s,t}}$$"))
     )
   })
   
@@ -232,34 +226,10 @@ server <- function(input, output, session) {
         margin = list(r = 40)
       )
 
-    if (input$facet == "Figure1d") {
+    if (input$facet == "Figure1-d") {
       fig %>%
-    # layout(
-    #   shapes = list(
-    #     list(
-    #       type = "line",
-    #       x0 = 2020,
-    #       x1 = 2020,
-    #       y0 = 0,
-    #       y1 = 13,
-    #       line = list(color = "blue", width = 2, dash = "dot")
-    #     )
-    #   )
-    #   ) %>%
     add_text(showlegend = FALSE, x = 2020, y = 10,
             text = "COVID-19") %>%
-    # layout(
-    #   shapes = list(
-    #     list(
-    #       type = "line",
-    #       x0 = 2007,
-    #       x1 = 2007,
-    #       y0 = 0,
-    #       y1 = 10,
-    #       line = list(color = "green", width = 2, dash = "dot")
-    #     )
-    #   )
-    #   ) %>%
     add_text(showlegend = FALSE, x = 2007, y = 15,
             text = "Global Financial Crisis")
     }
@@ -273,9 +243,7 @@ server <- function(input, output, session) {
     req(input$facet, input$year)
     
     map_data <- df %>%
-      filter(source == input$facet, Year == input$year) %>%
-      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) 
-      # drop_na()
+      filter(source == input$facet, Year == input$year)
     
     if (nrow(map_data) == 0) return(plotly_empty())
     
@@ -284,7 +252,7 @@ server <- function(input, output, session) {
         z = ~Value,
         color = ~Value,
         colors = "Blues",
-        locations = ~iso_code,
+        locations = ~iso3c,
         text = ~paste0("<b>", Country, "</b><br>",
                       axis_labels()$map_title, ": ", round(Value, 2)),
         hoverinfo = "text",
@@ -303,33 +271,6 @@ server <- function(input, output, session) {
       )
   })
   
-  # Data table
-  output$table <- renderDT({
-    req(input$facet)
-    df %>%
-      filter(source == input$facet) %>%
-      datatable(
-        rownames = FALSE,
-        extensions = 'Buttons',
-        options = list(
-          dom = 'Bfrtip',
-          buttons = c('copy', 'csv', 'excel'),
-          pageLength = 10,
-          scrollX = TRUE
-        )
-      ) %>%
-      formatRound(columns = 'Value', digits = 2)
-  })
-  
-  # Data download
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste0("chemical-space-", input$facet, "-", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      write.csv(df %>% filter(source == input$facet), file, row.names = FALSE)
-    }
-  )
 }
 
 shinyApp(ui, server)
