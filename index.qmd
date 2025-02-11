@@ -19,7 +19,7 @@ filters:
 #| viewerHeight: 800
 library(shiny)
 library(bslib)
-library(dplyr)
+library(tidyverse)
 library(plotly)
 
 ######### Data Preparation #########
