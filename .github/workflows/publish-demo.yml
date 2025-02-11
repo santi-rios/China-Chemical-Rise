@@ -51,18 +51,20 @@ jobs:
       # Upload a tar file that will work with GitHub Pages
       # Make sure to set a retention day to avoid running into a cap
       # This artifact shouldn't be required after deployment onto pages was a success.
-      - name: Upload Pages artifact
+      - name: Upload coverage report artifact
         id: upload-artifact
-        uses: actions/upload-pages-artifact@v2
-        with: 
+        uses: actions/upload-pages-artifact@main
+        with:
           name: github-pages
-      
-      # Use an Action deploy to push the artifact onto GitHub Pages
-      # This requires the `Action` tab being structured to allow for deployment
-      # instead of using `docs/` or the `gh-pages` branch of the repository
+
       - name: Deploy to GitHub Pages
         id: deployment
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/deploy-pages@v4
+        env:
+          name: github-pages
+          url: ${{ steps.deployment.outputs.page_url }}
         with: 
           artifact_name: github-pages
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
+          preview: true
