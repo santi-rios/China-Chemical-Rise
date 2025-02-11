@@ -13,10 +13,10 @@ website:
     left:
       - text: "Figure 1"
         file: index.qmd
-      - text: "Figure 2"
-        file: fig2.qmd
-      - text: "Figure Sup"
-        file: fig3.qmd
+      # - text: "Figure 2"
+      #   file: fig2.qmd
+      # - text: "Figure Sup"
+      #   file: fig3.qmd
   page-footer: 
     left: "Data in shinylive apps"
     right: 
