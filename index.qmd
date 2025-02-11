@@ -20,6 +20,7 @@ filters:
 library(shiny)
 library(bslib)
 library(tidyverse)
+# library(dplyr)
 library(plotly)
 library(countrycode)
 library(DT)
@@ -30,8 +31,10 @@ library(DT)
 # pak::pak("posit-dev/r-shinylive")
 
 ######### Data Preparation #########
+# df <- read.csv("df.csv")
+data_url <- "https://raw.githubusercontent.com/santi-rios/China-Chemical-Rise/refs/heads/main/df.csv"
+download.file(data_url, "df.csv")
 df <- read.csv("df.csv")
-
 ######### Custom Labels #########
 figure_labels <- list(
   "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"),
@@ -77,7 +80,7 @@ ui <- fluidPage(
                         max = max(df$Year),
                         value = min(df$Year),
                         step = 1,
-                        animate = animationOptions(interval = 500, loop = TRUE),
+                        animate = animationOptions(interval = 500, loop = FALSE),
                         width = "100%")
         ),
         
