@@ -1,6 +1,6 @@
 ---
 title: "Chemical Space Analysis"
-author: "RStudio"
+author: "author"
 format:
   html:
     grid: 
@@ -17,7 +17,8 @@ filters:
 ```{shinylive-r}
 #| standalone: true
 #| viewerHeight: 800
-library(shiny)
+library(shinylive)
+# library(shiny)
 library(bslib)
 library(tidyverse)
 # library(dplyr)
@@ -37,7 +38,7 @@ download.file(data_url, "df.csv")
 df <- read.csv("df.csv")
 ######### Custom Labels #########
 figure_labels <- list(
-  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"),
+  "Figure1a" = list(y_title = "Contribution Index", map_title = "Chemical Space Contribution"), 
   "Figure1b" = list(y_title = "Collaboration Index", map_title = "International Collaborations"),
   "Figure1c" = list(y_title = "Collaboration Percentage", map_title = "China-US Collaboration"),
   "Figure1d" = list(y_title = "GDP Growth Rate (%)", map_title = "Economic Indicators"),
@@ -76,8 +77,8 @@ ui <- fluidPage(
         
         div(class = "animation-controls",
             sliderInput("year", "Year",
-                        min = min(df$Year),
-                        max = max(df$Year),
+                        min = min(df$Year) ,
+                        max = max(df$Year) - 1,
                         value = min(df$Year),
                         step = 1,
                         animate = animationOptions(interval = 500, loop = FALSE),
@@ -151,7 +152,8 @@ server <- function(input, output, session) {
       ),
       column(6,
              checkboxGroupInput("countries2", NULL,
-                               choices = tail(countries, floor(length(countries)/2)))
+                               choices = tail(countries, floor(length(countries)/2)),
+                               selected = tail(countries, 4))
       )
     )
   })
@@ -219,7 +221,7 @@ server <- function(input, output, session) {
       )
     }
 
-    fig %>%
+    fig <- fig %>%
       layout(
         title = paste("Temporal Analysis -", input$facet),
         xaxis = list(title = "Year", gridcolor = "#ecf0f1"),
@@ -229,6 +231,41 @@ server <- function(input, output, session) {
         legend = list(orientation = 'h', y = -0.2),
         margin = list(r = 40)
       )
+
+    if (input$facet == "Figure1d") {
+      fig %>%
+    # layout(
+    #   shapes = list(
+    #     list(
+    #       type = "line",
+    #       x0 = 2020,
+    #       x1 = 2020,
+    #       y0 = 0,
+    #       y1 = 13,
+    #       line = list(color = "blue", width = 2, dash = "dot")
+    #     )
+    #   )
+    #   ) %>%
+    add_text(showlegend = FALSE, x = 2020, y = 10,
+            text = "COVID-19") %>%
+    # layout(
+    #   shapes = list(
+    #     list(
+    #       type = "line",
+    #       x0 = 2007,
+    #       x1 = 2007,
+    #       y0 = 0,
+    #       y1 = 10,
+    #       line = list(color = "green", width = 2, dash = "dot")
+    #     )
+    #   )
+    #   ) %>%
+    add_text(showlegend = FALSE, x = 2007, y = 15,
+            text = "Global Financial Crisis")
+    }
+    else {
+       fig
+    }
   })
   
   # World map visualization
@@ -237,8 +274,8 @@ server <- function(input, output, session) {
     
     map_data <- df %>%
       filter(source == input$facet, Year == input$year) %>%
-      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) %>%
-      drop_na()
+      mutate(iso_code = countrycode(Country, "country.name", "iso3c")) 
+      # drop_na()
     
     if (nrow(map_data) == 0) return(plotly_empty())
     
