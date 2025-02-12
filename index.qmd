@@ -19,7 +19,7 @@ filters:
 #| viewerHeight: 800
 library(shiny)
 library(bslib)
-library(dplyr)
+library(tidyverse)
 library(plotly)
 
 ######### Data Preparation #########
@@ -96,17 +96,6 @@ ui <- fluidPage(
       )
     )
   ),
-  
-  # Data Section
-  card(
-    card_header("Data Explorer", class = "bg-primary text-light"),
-    card_body(
-      DTOutput("table")
-    )
-  ),
-  
-  downloadButton("downloadData", "Download Dataset", class = "btn-success"),
-  
   # Footer
   div(
     class = "footer navbar navbar-static-bottom bg-light",
